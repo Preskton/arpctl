@@ -14,8 +14,10 @@ dist:
 run:
 	@go run .
 
+.PHONY: ship
 ship: dist
 	scp dist/bin/arpctl-linux-arm preston@marceline:/home/preston/arpctl
 
-run-remote:
+.PHONY: run-remote
+run-remote: ship
 	ssh preston@marceline '/home/preston/arpctl'
