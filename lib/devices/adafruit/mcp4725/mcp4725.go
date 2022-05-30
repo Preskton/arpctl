@@ -33,8 +33,11 @@ import (
 	"periph.io/x/conn/v3/physic"
 )
 
-const MaxVoltage = 0x0FFF
-const MinVoltage = 0x0000
+const MaxRawVoltage = 0x0FFF
+const MinRawVoltage = 0x0000
+const MaxVoltage = 5.5
+const MinVoltage = 0
+const RawOctave = MaxRawVoltage / 5
 
 const DefaultAddress uint16 = 0x62
 const CommandDontPersistWrite byte = 0x40

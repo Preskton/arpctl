@@ -31,7 +31,7 @@ func main() {
 	fmt.Print(banner)
 	fmt.Print("\n")
 
-	log.SetLevel(log.DebugLevel)
+	//log.SetLevel(log.DebugLevel)
 
 	log.Info("Initializing host...")
 	host.Init()

@@ -17,6 +17,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/preskton/arpctl/lib/devices/adafruit/mcp4725"
+
+	"github.com/eiannone/keyboard"
 )
 
 type TestParameters struct {
@@ -47,21 +49,12 @@ to quickly create a Cobra application.`,
 			return
 		}
 
-		log.Infof("Setting device on bus %s, at address 0x%x, to value %d", p.BusName, p.DeviceAddress, p.VoltageValue)
-		// TODO handle this as part of MCP4725, consumer shouldn't know
-		log.WithField("busName", p.BusName).Infof("Opening I2C bus")
-		busHandle, err := i2creg.Open(p.BusName)
+		err = demo(p)
 		if err != nil {
-			log.WithError(err).Fatalf("Failed to open I2C bus with error")
-			return
+			log.WithError(err).Errorf("Something didn't work while running the demo")
 		}
-		defer busHandle.Close()
 
-		log.WithField("address", fmt.Sprintf("0x%x", p.DeviceAddress)).Debug("Creating new MCP4725 device")
-		dac := &mcp4725.Mcp4725{Address: uint16(p.DeviceAddress), Bus: busHandle}
-
-		log.Debug("Preparing to call SetVoltage")
-		dac.SetVoltage(p.VoltageValue, false, p.BusFrequency)
+		return
 	},
 }
 
@@ -135,4 +128,105 @@ func parseI2cTestParameters(cmd *cobra.Command) (*TestParameters, error) {
 	}
 
 	return p, nil
+}
+
+func demo(p *TestParameters) error {
+	log.Infof("Setting device on bus %s, at address 0x%x, to value %d", p.BusName, p.DeviceAddress, p.VoltageValue)
+	// TODO handle this as part of MCP4725, consumer shouldn't know
+	log.WithField("busName", p.BusName).Infof("Opening I2C bus")
+	busHandle, err := i2creg.Open(p.BusName)
+	if err != nil {
+		log.WithError(err).Fatalf("Failed to open I2C bus with error")
+		return fmt.Errorf("Failed to open IC2 bus: %w", err)
+	}
+	defer busHandle.Close()
+
+	log.WithField("address", fmt.Sprintf("0x%x", p.DeviceAddress)).Debug("Creating new MCP4725 device")
+	dac := &mcp4725.Mcp4725{Address: uint16(p.DeviceAddress), Bus: busHandle}
+
+	keypressChannel, err := keyboard.GetKeys(2)
+	if err != nil {
+		log.WithError(err).Fatalf("Failed to open keyboard handler")
+		return fmt.Errorf("Failed to open keyboard handler: %w", err)
+	}
+	defer func() {
+		_ = keyboard.Close()
+	}()
+
+	pulseTicker := time.NewTicker(p.StepDuration)
+	durationTicker := time.NewTimer(p.TotalDuration)
+
+	currentVoltageStep := p.VoltageValue
+	direction := int16(1)
+
+	for {
+		select {
+		case event := <-keypressChannel:
+			if event.Err != nil {
+				panic(event.Err)
+			}
+			log.WithFields(log.Fields{"rune": fmt.Sprintf("%q", event.Rune), "key": fmt.Sprintf("0x%x", event.Key)}).Info("Keypress detected")
+			if event.Key == keyboard.KeyEsc {
+				return nil
+			} else if event.Key == keyboard.KeySpace {
+				pulseTicker.Stop()
+				durationTicker.Stop()
+				log.Info("Entering experimentation mode - all tickers stopped")
+			} else if event.Key == keyboard.KeyPgdn {
+				currentVoltageStep = mcp4725.MinRawVoltage
+				setDacVoltage(dac, currentVoltageStep, p.BusFrequency)
+			} else if event.Key == keyboard.KeyPgup {
+				currentVoltageStep = mcp4725.MaxRawVoltage
+				setDacVoltage(dac, currentVoltageStep, p.BusFrequency)
+			} else if string(event.Rune) == "w" {
+				// major adjustment up
+				currentVoltageStep, direction = getNextVoltage(currentVoltageStep, p.VoltageStep, 1)
+				setDacVoltage(dac, currentVoltageStep, p.BusFrequency)
+			} else if string(event.Rune) == "s" {
+				// major adjustment down
+				currentVoltageStep, direction = getNextVoltage(currentVoltageStep, p.VoltageStep, -1)
+				setDacVoltage(dac, currentVoltageStep, p.BusFrequency)
+			} else if string(event.Rune) == "a" {
+				// minor adjustment down
+				currentVoltageStep, direction = getNextVoltage(currentVoltageStep, -1, 1)
+				setDacVoltage(dac, currentVoltageStep, p.BusFrequency)
+			} else if string(event.Rune) == "d" {
+				// minor adjustment up
+				currentVoltageStep, direction = getNextVoltage(currentVoltageStep, 1, 1)
+				setDacVoltage(dac, currentVoltageStep, p.BusFrequency)
+			}
+		case <-pulseTicker.C:
+			setDacVoltage(dac, currentVoltageStep, p.BusFrequency)
+
+			currentVoltageStep, direction = getNextVoltage(currentVoltageStep, p.VoltageStep, direction)
+
+			continue
+		case <-durationTicker.C:
+			log.WithField("duration", p.TotalDuration).Infof("Test complete!")
+			return nil
+		}
+	}
+}
+
+func getNextVoltage(currentVoltage int16, voltageStep int16, direction int16) (int16, int16) {
+	nextVoltageStep := currentVoltage + (voltageStep * direction)
+
+	if nextVoltageStep > mcp4725.MaxRawVoltage {
+		log.WithField("nextStep", nextVoltageStep).Warn("Next voltage step would exceed max voltage, flipping direction -")
+		direction = -1
+		nextVoltageStep = currentVoltage + (voltageStep * direction)
+	} else if nextVoltageStep < mcp4725.MinRawVoltage {
+		log.WithField("nextStep", nextVoltageStep).Warn("Next voltage step would go below min voltage, flipping direction +")
+		direction = 1
+		nextVoltageStep = currentVoltage + (voltageStep * direction)
+	}
+	return nextVoltageStep, direction
+}
+
+func setDacVoltage(d *mcp4725.Mcp4725, v int16, f physic.Frequency) {
+	log.WithField("voltage", v).Info("Setting voltage")
+	err := d.SetVoltage(v, false, f)
+	if err != nil {
+		log.WithError(err).Error("Failed to set voltage on DAC")
+	}
 }
