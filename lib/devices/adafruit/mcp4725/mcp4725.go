@@ -26,10 +26,15 @@ package mcp4725
 // };
 
 import (
+	"fmt"
+
 	log "github.com/sirupsen/logrus"
 	"periph.io/x/conn/v3/i2c"
 	"periph.io/x/conn/v3/physic"
 )
+
+const MaxVoltage = 0x0FFF
+const MinVoltage = 0x0000
 
 const DefaultAddress uint16 = 0x62
 const CommandDontPersistWrite byte = 0x40
@@ -43,7 +48,7 @@ type Mcp4725 struct {
 func (m Mcp4725) SetVoltage(level int16, persist bool, i2cBusFreq int32) error {
 	var err error
 
-	log.Debugf("Preparing packet to set voltage output to %d", level)
+	log.WithField("level", level).Debug("Preparing packet to set voltage output")
 	packet := preparePacket(level, persist)
 
 	log.Debug("Preparing to set voltage")
@@ -53,17 +58,17 @@ func (m Mcp4725) SetVoltage(level int16, persist bool, i2cBusFreq int32) error {
 }
 
 func (m Mcp4725) setVoltage(packet [3]byte, frequency int32) error {
-	var err error
-
 	// set I2C frequency
-	log.Debug("Preparing to write to I2C bus")
-	m.Bus.SetSpeed(190 * physic.KiloHertz)
-	m.Bus.Tx(m.Address, packet[:], nil)
+	log.WithField("address", fmt.Sprintf("0x%x", m.Address)).Debug("Preparing to write to I2C bus")
+	m.Bus.SetSpeed(400 * physic.KiloHertz) // TODO set based on input
+	err := m.Bus.Tx(m.Address, packet[:], nil)
 
 	if err != nil {
 		log.WithError(err).Error("Failed to write to I2C bus")
 		return err
 	}
+
+	log.WithField("address", fmt.Sprintf("0x%x", m.Address)).Debug("Wrote to I2C bus")
 	// set I2c frequency back to whatever it was before?
 
 	return err
