@@ -45,22 +45,22 @@ type Mcp4725 struct {
 	Bus     i2c.Bus
 }
 
-func (m Mcp4725) SetVoltage(level int16, persist bool, i2cBusFreq int32) error {
+func (m Mcp4725) SetVoltage(level int16, persist bool, busFrequency physic.Frequency) error {
 	var err error
 
 	log.WithField("level", level).Debug("Preparing packet to set voltage output")
 	packet := preparePacket(level, persist)
 
 	log.Debug("Preparing to set voltage")
-	err = m.setVoltage(packet, i2cBusFreq)
+	err = m.setVoltage(packet, busFrequency)
 
 	return err
 }
 
-func (m Mcp4725) setVoltage(packet [3]byte, frequency int32) error {
+func (m Mcp4725) setVoltage(packet [3]byte, busFrequency physic.Frequency) error {
 	// set I2C frequency
 	log.WithField("address", fmt.Sprintf("0x%x", m.Address)).Debug("Preparing to write to I2C bus")
-	m.Bus.SetSpeed(400 * physic.KiloHertz) // TODO set based on input
+	m.Bus.SetSpeed(busFrequency)
 	err := m.Bus.Tx(m.Address, packet[:], nil)
 
 	if err != nil {
