@@ -8,11 +8,16 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+
+	"periph.io/x/conn/v3/gpio/gpioreg"
+	"periph.io/x/conn/v3/pin/pinreg"
+
+	log "github.com/sirupsen/logrus"
 )
 
-// gpioCmd represents the gpio command
-var gpioCmd = &cobra.Command{
-	Use:   "gpio",
+// gpioListCmd represents the list command
+var gpioListCmd = &cobra.Command{
+	Use:   "list",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
@@ -21,20 +26,34 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("gpio called")
+		log.Info("Listing all GPIO pins")
+		printGpio(false, false)
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(gpioCmd)
+	gpioCmd.AddCommand(gpioListCmd)
 
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// gpioCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// listCmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// gpioCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// listCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+}
+
+func printGpio(invalid, showFunctions bool) {
+	all := gpioreg.All()
+	for _, p := range all {
+		fmt.Print(p.String() + " - " + p.Function())
+
+		if pinreg.IsConnected(p) {
+			fmt.Print(" (connected)")
+		}
+
+		fmt.Print("\n")
+	}
 }
