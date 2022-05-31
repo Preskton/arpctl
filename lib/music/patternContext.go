@@ -2,7 +2,6 @@ package music
 
 import (
 	"github.com/preskton/arpctl/lib/music/scale"
-	log "github.com/sirupsen/logrus"
 )
 
 type PatternContext struct {
@@ -21,6 +20,4 @@ func (pc *PatternContext) Advance() {
 	}
 
 	pc.NextNote = GetNoteByRootAndOffset(pc.RootNote, pc.Scale.IntegerNotation[pc.PatternIndex])
-
-	log.WithField("pc", pc).Info("advancing pattern")
 }

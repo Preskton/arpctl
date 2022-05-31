@@ -250,6 +250,10 @@ func perform(p *PerformanceParameters) error {
 				} else {
 					log.Info("Leaving arp mode")
 				}
+			} else if string(event.Rune) == "u" {
+				pc.RootNote = &music.AllNotes[pc.RootNote.Number+1]
+			} else if string(event.Rune) == "j" {
+				pc.RootNote = &music.AllNotes[pc.RootNote.Number-1]
 			}
 		case <-pulseTicker.C:
 			if arpMode {
@@ -284,7 +288,7 @@ func getNextVoltage(currentVoltage int16, voltageStep int16, direction int16) (i
 }
 
 func setDacVoltage(d *mcp4725.Mcp4725, v int16, f physic.Frequency) {
-	log.WithField("voltage", v).Info("Setting voltage")
+	log.WithField("voltage", v).Debug("Setting voltage")
 	err := d.SetVoltage(v, false, f)
 	if err != nil {
 		log.WithError(err).Error("Failed to set voltage on DAC")
