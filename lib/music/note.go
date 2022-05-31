@@ -3,7 +3,7 @@ package music
 type Note struct {
 	Name                string
 	Letter              string
-	AbsoluteIndex       uint
+	Number              uint
 	EnharmonicSharpName string
 	EnharmonicFlatName  string
 	Frequency           float64
@@ -15,6 +15,8 @@ type Note struct {
 	Pollux    uint16
 	Werkstatt uint16
 }
+
+var AllNotes []Note
 
 func GetNoteByName(name string) *Note {
 	for _, note := range AllNotes {
