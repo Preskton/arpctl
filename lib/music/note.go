@@ -16,6 +16,34 @@ type Note struct {
 	Werkstatt uint16
 }
 
-func something() {
+func GetNoteByName(name string) *Note {
+	for _, note := range AllNotes {
+		if isNameMatch(name, &note) {
+			return &note
+		}
+	}
 
+	return nil
+}
+
+func isNameMatch(name string, note *Note) bool {
+	return note != nil && note.Name == name
+}
+
+func isEnharmonicMatch(name string, note *Note) bool {
+	return note != nil && (note.EnharmonicSharpName == name || note.EnharmonicFlatName == name)
+}
+
+func GetNoteByGeneralSearch(target string) *Note {
+	for _, note := range AllNotes {
+		if isNameMatch(target, &note) {
+			return &note
+		}
+
+		if isEnharmonicMatch(target, &note) {
+			return &note
+		}
+	}
+
+	return nil
 }
