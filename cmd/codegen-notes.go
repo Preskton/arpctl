@@ -84,7 +84,7 @@ func csvLines2Notes(lines [][]string) ([]music.Note, error) {
 
 		note := music.Note{}
 
-		note.Number = uint(lineIndex)
+		note.Number = lineIndex
 		note.Name = line[0]
 		note.Letter = line[1]
 		// Skip index b/c we'll just use line number

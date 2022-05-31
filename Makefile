@@ -17,6 +17,9 @@ run:
 .PHONY: ship
 ship: dist
 	scp dist/bin/arpctl-linux-arm preston@marceline:/home/preston/arpctl
+	scp config/notes.json preston@marceline:/home/preston/config
+	scp config/scales.json preston@marceline:/home/preston/config
+	scp config/arpconfig.yaml preston@marceline:/home/preston/config
 
 .PHONY: run-remote
 run-remote: ship

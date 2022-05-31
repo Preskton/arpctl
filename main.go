@@ -56,8 +56,6 @@ func main() {
 	loadNoteconfig()
 	loadScaleconfig()
 
-	fmt.Printf("%#v", scale.AllNamedScalePatterns)
-
 	log.Debug("Initializing host...")
 	host.Init()
 
@@ -91,5 +89,5 @@ func loadNoteconfig() {
 }
 
 func loadScaleconfig() {
-	unmarshalJson("config/scales.json", &scale.AllNamedScalePatterns)
+	unmarshalJson("config/scales.json", &scale.AllScalePatterns)
 }

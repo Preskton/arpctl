@@ -17,9 +17,13 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/preskton/arpctl/lib/devices/adafruit/mcp4725"
+	"github.com/preskton/arpctl/lib/music"
+	"github.com/preskton/arpctl/lib/music/scale"
 
 	"github.com/eiannone/keyboard"
 )
+
+var arpMode = false
 
 type PerformanceParameters struct {
 	BusName       string
@@ -29,11 +33,14 @@ type PerformanceParameters struct {
 	TotalDuration time.Duration
 	VoltageStep   int16
 	StepDuration  time.Duration
+	Scale         *scale.ScalePattern
+	RootNote      *music.Note
+	BPM           int
 }
 
 // performanceStartCmd represents the test command
 var performanceStartCmd = &cobra.Command{
-	Use:   "test",
+	Use:   "start",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
@@ -74,9 +81,13 @@ func init() {
 
 	performanceStartCmd.Flags().String("stepDuration", "500ms", "Duration of each note during the test")
 
-	performanceStartCmd.Flags().String("scale", "Major thirds", "Scale to use for arpin'")
+	performanceStartCmd.Flags().String("scale", "Major thirds w/ octave", "Scale to use for arpin'")
 
-	performanceStartCmd.Flags().IntP("octave", "o", 2, "Starting octave [0-8]")
+	performanceStartCmd.Flags().StringP("root", "r", "A2", "Root note of the arp")
+
+	performanceStartCmd.Flags().Int("bpm", 120, "Beats per minute, used to calc note length")
+
+	// TODO note type
 }
 
 func parsePerformanceParameters(cmd *cobra.Command) (*PerformanceParameters, error) {
@@ -131,6 +142,22 @@ func parsePerformanceParameters(cmd *cobra.Command) (*PerformanceParameters, err
 		return nil, fmt.Errorf("Couldn't parse duration flag: %w", err)
 	}
 
+	noteName := cmd.Flag("root").Value.String()
+	note := music.GetNoteByName(noteName)
+	if note == nil {
+		log.WithField("noteName", noteName).Error("No note with matching name found")
+	}
+	p.RootNote = note
+
+	scaleText := cmd.Flag("scale").Value.String()
+	scale := scale.GetScaleByName(scaleText)
+	if scale == nil {
+		log.WithField("scaleName", scaleText).Errorf("No scale with matching name found")
+	}
+	p.Scale = scale
+
+	log.Error(p.Scale.Name)
+
 	return p, nil
 }
 
@@ -162,6 +189,13 @@ func perform(p *PerformanceParameters) error {
 
 	currentVoltageStep := p.VoltageValue
 	direction := int16(1)
+
+	pc := music.PatternContext{
+		RootNote:     p.RootNote,
+		NextNote:     p.RootNote,
+		Scale:        p.Scale,
+		PatternIndex: 0,
+	}
 
 	for {
 		select {
@@ -206,11 +240,25 @@ func perform(p *PerformanceParameters) error {
 				// minor adjustment up
 				currentVoltageStep, direction = getNextVoltage(currentVoltageStep, 10, 1)
 				setDacVoltage(dac, currentVoltageStep, p.BusFrequency)
+			} else if string(event.Rune) == "r" {
+				// arp mode
+				arpMode = !arpMode
+
+				if arpMode {
+					log.Info("Starting arp mode")
+					log.Infof("%#v", pc)
+				} else {
+					log.Info("Leaving arp mode")
+				}
 			}
 		case <-pulseTicker.C:
-			setDacVoltage(dac, currentVoltageStep, p.BusFrequency)
-
-			currentVoltageStep, direction = getNextVoltage(currentVoltageStep, p.VoltageStep, direction)
+			if arpMode {
+				setDacVoltage(dac, int16(pc.NextNote.Castor), p.BusFrequency)
+				pc.Advance()
+			} else {
+				setDacVoltage(dac, currentVoltageStep, p.BusFrequency)
+				currentVoltageStep, direction = getNextVoltage(currentVoltageStep, p.VoltageStep, direction)
+			}
 
 			continue
 		case <-durationTicker.C:

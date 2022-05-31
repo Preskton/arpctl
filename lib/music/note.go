@@ -3,7 +3,7 @@ package music
 type Note struct {
 	Name                string
 	Letter              string
-	Number              uint
+	Number              int
 	EnharmonicSharpName string
 	EnharmonicFlatName  string
 	Frequency           float64
@@ -48,4 +48,9 @@ func GetNoteByGeneralSearch(target string) *Note {
 	}
 
 	return nil
+}
+
+func GetNoteByRootAndOffset(note *Note, offset int) *Note {
+	// TODO b safe
+	return &AllNotes[int(note.Number)+offset]
 }
