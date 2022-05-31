@@ -24,3 +24,7 @@ ship: dist
 .PHONY: run-remote
 run-remote: ship
 	ssh preston@marceline '/home/preston/arpctl'
+
+.PHONY: docs
+docs: build
+	dist/bin/arpctl codegen docs

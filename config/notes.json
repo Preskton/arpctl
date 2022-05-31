@@ -146,7 +146,8 @@
         "letter": "F",
         "enharmonicsharpname": "F#1",
         "frequency": 46.25,
-        "wavelength": 745.96
+        "wavelength": 745.96,
+        "castor": 291
     },
     {
         "number": 19,
@@ -154,7 +155,8 @@
         "letter": "G",
         "enharmonicflatname": "Gb1",
         "frequency": 49,
-        "wavelength": 704.09
+        "wavelength": 704.09,
+        "castor": 355
     },
     {
         "number": 20,
@@ -162,7 +164,8 @@
         "letter": "G",
         "enharmonicsharpname": "G#1",
         "frequency": 51.91,
-        "wavelength": 664.57
+        "wavelength": 664.57,
+        "castor": 420
     },
     {
         "number": 21,
@@ -497,7 +500,8 @@
         "letter": "A",
         "enharmonicsharpname": "A#4",
         "frequency": 466.16,
-        "wavelength": 74.01
+        "wavelength": 74.01,
+        "castor": 2879
     },
     {
         "number": 59,
@@ -505,14 +509,16 @@
         "letter": "B",
         "enharmonicflatname": "Bb4",
         "frequency": 493.88,
-        "wavelength": 69.85
+        "wavelength": 69.85,
+        "castor": 2943
     },
     {
         "number": 60,
         "name": "C5",
         "letter": "C",
         "frequency": 523.25,
-        "wavelength": 65.93
+        "wavelength": 65.93,
+        "castor": 3008
     },
     {
         "number": 61,
@@ -520,7 +526,8 @@
         "letter": "C",
         "enharmonicsharpname": "C#5",
         "frequency": 554.37,
-        "wavelength": 62.23
+        "wavelength": 62.23,
+        "castor": 3073
     },
     {
         "number": 62,
@@ -528,7 +535,8 @@
         "letter": "D",
         "enharmonicflatname": "Db5",
         "frequency": 587.33,
-        "wavelength": 58.74
+        "wavelength": 58.74,
+        "castor": 3137
     },
     {
         "number": 63,
@@ -536,7 +544,8 @@
         "letter": "D",
         "enharmonicsharpname": "D#5",
         "frequency": 622.25,
-        "wavelength": 55.44
+        "wavelength": 55.44,
+        "castor": 3202
     },
     {
         "number": 64,
@@ -544,14 +553,16 @@
         "letter": "E",
         "enharmonicflatname": "Eb5",
         "frequency": 659.25,
-        "wavelength": 52.33
+        "wavelength": 52.33,
+        "castor": 3267
     },
     {
         "number": 65,
         "name": "F5",
         "letter": "F",
         "frequency": 698.46,
-        "wavelength": 49.39
+        "wavelength": 49.39,
+        "castor": 3331
     },
     {
         "number": 66,
@@ -559,7 +570,8 @@
         "letter": "F",
         "enharmonicsharpname": "F#5",
         "frequency": 739.99,
-        "wavelength": 46.62
+        "wavelength": 46.62,
+        "castor": 3396
     },
     {
         "number": 67,
@@ -567,7 +579,8 @@
         "letter": "G",
         "enharmonicflatname": "Gb5",
         "frequency": 783.99,
-        "wavelength": 44.01
+        "wavelength": 44.01,
+        "castor": 3461
     },
     {
         "number": 68,
@@ -575,7 +588,8 @@
         "letter": "G",
         "enharmonicsharpname": "G#5",
         "frequency": 830.61,
-        "wavelength": 41.54
+        "wavelength": 41.54,
+        "castor": 3525
     },
     {
         "number": 69,
