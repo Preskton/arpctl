@@ -165,7 +165,7 @@ func demo(p *TestParameters) error {
 			if event.Err != nil {
 				panic(event.Err)
 			}
-			log.WithFields(log.Fields{"rune": fmt.Sprintf("%q", event.Rune), "key": fmt.Sprintf("0x%x", event.Key)}).Info("Keypress detected")
+			log.WithFields(log.Fields{"rune": fmt.Sprintf("%q", event.Rune), "key": fmt.Sprintf("0x%x", event.Key)}).Debug("Keypress detected")
 			if event.Key == keyboard.KeyEsc {
 				return nil
 			} else if event.Key == keyboard.KeySpace {
@@ -193,6 +193,14 @@ func demo(p *TestParameters) error {
 			} else if string(event.Rune) == "d" {
 				// minor adjustment up
 				currentVoltageStep, direction = getNextVoltage(currentVoltageStep, 1, 1)
+				setDacVoltage(dac, currentVoltageStep, p.BusFrequency)
+			} else if string(event.Rune) == "q" {
+				// minor adjustment down
+				currentVoltageStep, direction = getNextVoltage(currentVoltageStep, -10, 1)
+				setDacVoltage(dac, currentVoltageStep, p.BusFrequency)
+			} else if string(event.Rune) == "e" {
+				// minor adjustment up
+				currentVoltageStep, direction = getNextVoltage(currentVoltageStep, 10, 1)
 				setDacVoltage(dac, currentVoltageStep, p.BusFrequency)
 			}
 		case <-pulseTicker.C:
