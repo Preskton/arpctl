@@ -391,7 +391,8 @@
         "letter": "A",
         "enharmonicsharpname": "A#3",
         "frequency": 233.08,
-        "wavelength": 148.02
+        "wavelength": 148.02,
+        "castor": 2102
     },
     {
         "number": 47,
@@ -399,14 +400,16 @@
         "letter": "B",
         "enharmonicflatname": "Bb3",
         "frequency": 246.94,
-        "wavelength": 139.71
+        "wavelength": 139.71,
+        "castor": 2167
     },
     {
         "number": 48,
         "name": "C4",
         "letter": "C",
         "frequency": 261.63,
-        "wavelength": 131.87
+        "wavelength": 131.87,
+        "castor": 2232
     },
     {
         "number": 49,
@@ -414,7 +417,8 @@
         "letter": "C",
         "enharmonicsharpname": "C#4",
         "frequency": 277.18,
-        "wavelength": 124.47
+        "wavelength": 124.47,
+        "castor": 2296
     },
     {
         "number": 50,
@@ -422,7 +426,8 @@
         "letter": "D",
         "enharmonicflatname": "Db4",
         "frequency": 293.66,
-        "wavelength": 117.48
+        "wavelength": 117.48,
+        "castor": 2361
     },
     {
         "number": 51,
@@ -430,7 +435,8 @@
         "letter": "D",
         "enharmonicsharpname": "D#4",
         "frequency": 311.13,
-        "wavelength": 110.89
+        "wavelength": 110.89,
+        "castor": 2426
     },
     {
         "number": 52,
@@ -438,14 +444,16 @@
         "letter": "E",
         "enharmonicflatname": "Eb4",
         "frequency": 329.63,
-        "wavelength": 104.66
+        "wavelength": 104.66,
+        "castor": 2490
     },
     {
         "number": 53,
         "name": "F4",
         "letter": "F",
         "frequency": 349.23,
-        "wavelength": 98.79
+        "wavelength": 98.79,
+        "castor": 2555
     },
     {
         "number": 54,
@@ -453,7 +461,8 @@
         "letter": "F",
         "enharmonicsharpname": "F#4",
         "frequency": 369.99,
-        "wavelength": 93.24
+        "wavelength": 93.24,
+        "castor": 2620
     },
     {
         "number": 55,
@@ -461,7 +470,8 @@
         "letter": "G",
         "enharmonicflatname": "Gb4",
         "frequency": 392,
-        "wavelength": 88.01
+        "wavelength": 88.01,
+        "castor": 2684
     },
     {
         "number": 56,
@@ -469,7 +479,8 @@
         "letter": "G",
         "enharmonicsharpname": "G#4",
         "frequency": 415.3,
-        "wavelength": 83.07
+        "wavelength": 83.07,
+        "castor": 2749
     },
     {
         "number": 57,

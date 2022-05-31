@@ -1,9 +1,10 @@
 package scale
 
-import "github.com/preskton/arpctl/lib/music"
+var AllNamedScalePatterns []ScalePattern
 
-type Scale []*music.Note
-
-const (
-	Major = []{}
-)
+type ScalePattern struct {
+	Name            string
+	Degrees         string
+	Intervals       string
+	IntegerNotation []int
+}

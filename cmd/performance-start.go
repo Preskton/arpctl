@@ -21,7 +21,7 @@ import (
 	"github.com/eiannone/keyboard"
 )
 
-type TestParameters struct {
+type PerformanceParameters struct {
 	BusName       string
 	BusFrequency  physic.Frequency
 	DeviceAddress uint16
@@ -31,8 +31,8 @@ type TestParameters struct {
 	StepDuration  time.Duration
 }
 
-// i2cTestCmd represents the test command
-var i2cTestCmd = &cobra.Command{
+// performanceStartCmd represents the test command
+var performanceStartCmd = &cobra.Command{
 	Use:   "test",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
@@ -43,13 +43,13 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		p, err := parseI2cTestParameters(cmd)
+		p, err := parsePerformanceParameters(cmd)
 		if err != nil {
 			log.WithError(err).Fatalf("Failed to parse test parameters from command line arguments")
 			return
 		}
 
-		err = demo(p)
+		err = perform(p)
 		if err != nil {
 			log.WithError(err).Errorf("Something didn't work while running the demo")
 		}
@@ -59,24 +59,28 @@ to quickly create a Cobra application.`,
 }
 
 func init() {
-	i2cCmd.AddCommand(i2cTestCmd)
+	performanceCmd.AddCommand(performanceStartCmd)
 
-	i2cTestCmd.Flags().StringP("bus", "b", "", "I2C bus with attached DAC, by default, use the system's default I2C bus")
+	performanceStartCmd.Flags().StringP("bus", "b", "", "I2C bus with attached DAC, by default, use the system's default I2C bus")
 
-	i2cTestCmd.Flags().StringP("address", "a", "", "Address of the DAC")
-	i2cTestCmd.MarkFlagRequired("address")
+	performanceStartCmd.Flags().StringP("address", "a", "", "Address of the DAC")
+	performanceStartCmd.MarkFlagRequired("address")
 
-	i2cTestCmd.Flags().IntP("startingVoltage", "v", 0, "Starting voltage value of the test")
+	performanceStartCmd.Flags().IntP("startingVoltage", "v", 0, "Starting voltage value of the test")
 
-	i2cTestCmd.Flags().StringP("duration", "d", "10s", "Total duration of the test")
+	performanceStartCmd.Flags().StringP("duration", "d", "10s", "Total duration of the test")
 
-	i2cTestCmd.Flags().IntP("step", "s", 250, "Size of each step during the test")
+	performanceStartCmd.Flags().IntP("step", "s", 250, "Size of each step during the test")
 
-	i2cTestCmd.Flags().String("stepDuration", "500ms", "Duration of each note during the test")
+	performanceStartCmd.Flags().String("stepDuration", "500ms", "Duration of each note during the test")
+
+	performanceStartCmd.Flags().String("scale", "Major thirds", "Scale to use for arpin'")
+
+	performanceStartCmd.Flags().IntP("octave", "o", 2, "Starting octave [0-8]")
 }
 
-func parseI2cTestParameters(cmd *cobra.Command) (*TestParameters, error) {
-	p := &TestParameters{}
+func parsePerformanceParameters(cmd *cobra.Command) (*PerformanceParameters, error) {
+	p := &PerformanceParameters{}
 
 	busName := cmd.Flag("bus").Value.String()
 	p.BusName = busName
@@ -130,7 +134,7 @@ func parseI2cTestParameters(cmd *cobra.Command) (*TestParameters, error) {
 	return p, nil
 }
 
-func demo(p *TestParameters) error {
+func perform(p *PerformanceParameters) error {
 	log.Infof("Setting device on bus %s, at address 0x%x, to value %d", p.BusName, p.DeviceAddress, p.VoltageValue)
 	// TODO handle this as part of MCP4725, consumer shouldn't know
 	log.WithField("busName", p.BusName).Infof("Opening I2C bus")
@@ -163,7 +167,7 @@ func demo(p *TestParameters) error {
 		select {
 		case event := <-keypressChannel:
 			if event.Err != nil {
-				panic(event.Err)
+				log.WithError(event.Err).Error("Unexpected error while handling keypress")
 			}
 			log.WithFields(log.Fields{"rune": fmt.Sprintf("%q", event.Rune), "key": fmt.Sprintf("0x%x", event.Key)}).Debug("Keypress detected")
 			if event.Key == keyboard.KeyEsc {
