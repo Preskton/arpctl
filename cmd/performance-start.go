@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -17,11 +18,15 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/preskton/arpctl/lib/devices/adafruit/mcp4725"
+	"github.com/preskton/arpctl/lib/music"
+	"github.com/preskton/arpctl/lib/music/scale"
 
 	"github.com/eiannone/keyboard"
 )
 
-type TestParameters struct {
+var arpMode = false
+
+type PerformanceParameters struct {
 	BusName       string
 	BusFrequency  physic.Frequency
 	DeviceAddress uint16
@@ -29,11 +34,15 @@ type TestParameters struct {
 	TotalDuration time.Duration
 	VoltageStep   int16
 	StepDuration  time.Duration
+	Scale         *scale.ScalePattern
+	RootNote      *music.Note
+	BPM           int
+	AdvancerName  string
 }
 
-// i2cTestCmd represents the test command
-var i2cTestCmd = &cobra.Command{
-	Use:   "test",
+// performanceStartCmd represents the test command
+var performanceStartCmd = &cobra.Command{
+	Use:   "start",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
@@ -43,13 +52,13 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		p, err := parseI2cTestParameters(cmd)
+		p, err := parsePerformanceParameters(cmd)
 		if err != nil {
 			log.WithError(err).Fatalf("Failed to parse test parameters from command line arguments")
 			return
 		}
 
-		err = demo(p)
+		err = perform(p)
 		if err != nil {
 			log.WithError(err).Errorf("Something didn't work while running the demo")
 		}
@@ -59,24 +68,34 @@ to quickly create a Cobra application.`,
 }
 
 func init() {
-	i2cCmd.AddCommand(i2cTestCmd)
+	performanceCmd.AddCommand(performanceStartCmd)
 
-	i2cTestCmd.Flags().StringP("bus", "b", "", "I2C bus with attached DAC, by default, use the system's default I2C bus")
+	performanceStartCmd.Flags().StringP("bus", "b", "", "I2C bus with attached DAC, by default, use the system's default I2C bus")
 
-	i2cTestCmd.Flags().StringP("address", "a", "", "Address of the DAC")
-	i2cTestCmd.MarkFlagRequired("address")
+	performanceStartCmd.Flags().StringP("address", "a", "", "Address of the DAC")
+	performanceStartCmd.MarkFlagRequired("address")
 
-	i2cTestCmd.Flags().IntP("startingVoltage", "v", 0, "Starting voltage value of the test")
+	performanceStartCmd.Flags().IntP("startingVoltage", "v", 0, "Starting voltage value of the test")
 
-	i2cTestCmd.Flags().StringP("duration", "d", "10s", "Total duration of the test")
+	performanceStartCmd.Flags().StringP("duration", "d", "10s", "Total duration of the test")
 
-	i2cTestCmd.Flags().IntP("step", "s", 250, "Size of each step during the test")
+	performanceStartCmd.Flags().IntP("step", "s", 250, "Size of each step during the test")
 
-	i2cTestCmd.Flags().String("stepDuration", "500ms", "Duration of each note during the test")
+	performanceStartCmd.Flags().String("stepDuration", "500ms", "Duration of each note during the test")
+
+	performanceStartCmd.Flags().String("scale", "Major thirds w/ octave", "Scale to use for arpin'")
+
+	performanceStartCmd.Flags().StringP("root", "r", "A2", "Root note of the arp")
+
+	performanceStartCmd.Flags().Int("bpm", 120, "Beats per minute, used to calc note length")
+
+	performanceStartCmd.Flags().String("advancer", "ToTheMoon", "Advancer (from package `music`) that determines how the next note in a pattern is selected")
+
+	// TODO note type
 }
 
-func parseI2cTestParameters(cmd *cobra.Command) (*TestParameters, error) {
-	p := &TestParameters{}
+func parsePerformanceParameters(cmd *cobra.Command) (*PerformanceParameters, error) {
+	p := &PerformanceParameters{}
 
 	busName := cmd.Flag("bus").Value.String()
 	p.BusName = busName
@@ -127,10 +146,27 @@ func parseI2cTestParameters(cmd *cobra.Command) (*TestParameters, error) {
 		return nil, fmt.Errorf("Couldn't parse duration flag: %w", err)
 	}
 
+	noteName := cmd.Flag("root").Value.String()
+	note := music.GetNoteByName(noteName)
+	if note == nil {
+		log.WithField("noteName", noteName).Error("No note with matching name found")
+	}
+	p.RootNote = note
+
+	scaleText := cmd.Flag("scale").Value.String()
+	scale := scale.GetScaleByName(scaleText)
+	if scale == nil {
+		log.WithField("scaleName", scaleText).Errorf("No scale with matching name found")
+	}
+	p.Scale = scale
+
+	advancerName := cmd.Flag("advancer").Value.String()
+	p.AdvancerName = advancerName
+
 	return p, nil
 }
 
-func demo(p *TestParameters) error {
+func perform(p *PerformanceParameters) error {
 	log.Infof("Setting device on bus %s, at address 0x%x, to value %d", p.BusName, p.DeviceAddress, p.VoltageValue)
 	// TODO handle this as part of MCP4725, consumer shouldn't know
 	log.WithField("busName", p.BusName).Infof("Opening I2C bus")
@@ -159,13 +195,32 @@ func demo(p *TestParameters) error {
 	currentVoltageStep := p.VoltageValue
 	direction := int16(1)
 
+	pc := music.PatternContext{
+		RootNote:         p.RootNote,
+		NextNote:         p.RootNote,
+		Scale:            p.Scale,
+		PatternIndex:     0,
+		PatternDirection: 1,
+	}
+
+	log.WithField("advancerName", p.AdvancerName).Info("Looking for a matching advancer")
+	// TODO prob the worst way to do this. consider making these funcs not part of the struct and just making a map.
+	r := reflect.ValueOf(&pc).MethodByName(p.AdvancerName)
+	if r != reflect.Zero(reflect.TypeOf(&pc)) {
+		log.WithField("advancerName", p.AdvancerName).Info("Found advancer")
+		pc.Advancer = func() { r.Call([]reflect.Value{}) }
+	} else {
+		log.WithField("advancerName", p.AdvancerName).Warn("Didn't find advancer, defaulting to ToTheMoon")
+		pc.Advancer = func() { pc.ToTheMoon() }
+	}
+
 	for {
 		select {
 		case event := <-keypressChannel:
 			if event.Err != nil {
-				panic(event.Err)
+				log.WithError(event.Err).Error("Unexpected error while handling keypress")
 			}
-			log.WithFields(log.Fields{"rune": fmt.Sprintf("%q", event.Rune), "key": fmt.Sprintf("0x%x", event.Key)}).Info("Keypress detected")
+			log.WithFields(log.Fields{"rune": fmt.Sprintf("%q", event.Rune), "key": fmt.Sprintf("0x%x", event.Key)}).Debug("Keypress detected")
 			if event.Key == keyboard.KeyEsc {
 				return nil
 			} else if event.Key == keyboard.KeySpace {
@@ -194,11 +249,37 @@ func demo(p *TestParameters) error {
 				// minor adjustment up
 				currentVoltageStep, direction = getNextVoltage(currentVoltageStep, 1, 1)
 				setDacVoltage(dac, currentVoltageStep, p.BusFrequency)
+			} else if string(event.Rune) == "q" {
+				// minor adjustment down
+				currentVoltageStep, direction = getNextVoltage(currentVoltageStep, -10, 1)
+				setDacVoltage(dac, currentVoltageStep, p.BusFrequency)
+			} else if string(event.Rune) == "e" {
+				// minor adjustment up
+				currentVoltageStep, direction = getNextVoltage(currentVoltageStep, 10, 1)
+				setDacVoltage(dac, currentVoltageStep, p.BusFrequency)
+			} else if string(event.Rune) == "r" {
+				// arp mode
+				arpMode = !arpMode
+
+				if arpMode {
+					log.Info("Starting arp mode")
+					log.Infof("%#v", pc)
+				} else {
+					log.Info("Leaving arp mode")
+				}
+			} else if string(event.Rune) == "u" {
+				pc.RootNote = &music.AllNotes[pc.RootNote.Number+1]
+			} else if string(event.Rune) == "j" {
+				pc.RootNote = &music.AllNotes[pc.RootNote.Number-1]
 			}
 		case <-pulseTicker.C:
-			setDacVoltage(dac, currentVoltageStep, p.BusFrequency)
-
-			currentVoltageStep, direction = getNextVoltage(currentVoltageStep, p.VoltageStep, direction)
+			if arpMode {
+				setDacVoltage(dac, int16(pc.NextNote.Castor), p.BusFrequency)
+				pc.Advancer()
+			} else {
+				setDacVoltage(dac, currentVoltageStep, p.BusFrequency)
+				currentVoltageStep, direction = getNextVoltage(currentVoltageStep, p.VoltageStep, direction)
+			}
 
 			continue
 		case <-durationTicker.C:
@@ -224,7 +305,7 @@ func getNextVoltage(currentVoltage int16, voltageStep int16, direction int16) (i
 }
 
 func setDacVoltage(d *mcp4725.Mcp4725, v int16, f physic.Frequency) {
-	log.WithField("voltage", v).Info("Setting voltage")
+	log.WithField("voltage", v).Debug("Setting voltage")
 	err := d.SetVoltage(v, false, f)
 	if err != nil {
 		log.WithError(err).Error("Failed to set voltage on DAC")
