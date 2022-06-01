@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -36,6 +37,7 @@ type PerformanceParameters struct {
 	Scale         *scale.ScalePattern
 	RootNote      *music.Note
 	BPM           int
+	AdvancerName  string
 }
 
 // performanceStartCmd represents the test command
@@ -86,6 +88,8 @@ func init() {
 	performanceStartCmd.Flags().StringP("root", "r", "A2", "Root note of the arp")
 
 	performanceStartCmd.Flags().Int("bpm", 120, "Beats per minute, used to calc note length")
+
+	performanceStartCmd.Flags().String("advancer", "ToTheMoon", "Advancer (from package `music`) that determines how the next note in a pattern is selected")
 
 	// TODO note type
 }
@@ -156,7 +160,8 @@ func parsePerformanceParameters(cmd *cobra.Command) (*PerformanceParameters, err
 	}
 	p.Scale = scale
 
-	log.Error(p.Scale.Name)
+	advancerName := cmd.Flag("advancer").Value.String()
+	p.AdvancerName = advancerName
 
 	return p, nil
 }
@@ -191,10 +196,22 @@ func perform(p *PerformanceParameters) error {
 	direction := int16(1)
 
 	pc := music.PatternContext{
-		RootNote:     p.RootNote,
-		NextNote:     p.RootNote,
-		Scale:        p.Scale,
-		PatternIndex: 0,
+		RootNote:         p.RootNote,
+		NextNote:         p.RootNote,
+		Scale:            p.Scale,
+		PatternIndex:     0,
+		PatternDirection: 1,
+	}
+
+	log.WithField("advancerName", p.AdvancerName).Info("Looking for a matching advancer")
+	// TODO prob the worst way to do this. consider making these funcs not part of the struct and just making a map.
+	r := reflect.ValueOf(&pc).MethodByName(p.AdvancerName)
+	if r != reflect.Zero(reflect.TypeOf(&pc)) {
+		log.WithField("advancerName", p.AdvancerName).Info("Found advancer")
+		pc.Advancer = func() { r.Call([]reflect.Value{}) }
+	} else {
+		log.WithField("advancerName", p.AdvancerName).Warn("Didn't find advancer, defaulting to ToTheMoon")
+		pc.Advancer = func() { pc.ToTheMoon() }
 	}
 
 	for {
@@ -258,7 +275,7 @@ func perform(p *PerformanceParameters) error {
 		case <-pulseTicker.C:
 			if arpMode {
 				setDacVoltage(dac, int16(pc.NextNote.Castor), p.BusFrequency)
-				pc.Advance()
+				pc.Advancer()
 			} else {
 				setDacVoltage(dac, currentVoltageStep, p.BusFrequency)
 				currentVoltageStep, direction = getNextVoltage(currentVoltageStep, p.VoltageStep, direction)
